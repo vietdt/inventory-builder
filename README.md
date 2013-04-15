@@ -5,7 +5,7 @@ Must have Python 2.7 with virtualenv installed first.
 
 Get the package source code
 
-    $ git clone https://vietdt@bitbucket.org/vietdt/inventory-builder.git
+    $ git clone https://github.com/vietdt/inventory-builder.git
     $ cd inventory-builder/
 
 Create a python virtual env inside the package
