@@ -12,8 +12,8 @@ class StandardCrawler(object):
     A basic web crawler that helps build a website inventory easily.
     """
 
-    def __init__(self, base_url, html_exts=['.html', '.php'], media_exts=['.pdf'],
-                 output_filename='website_inv', timeout=30.0,
+    def __init__(self, base_url, html_exts=[], media_exts=[],
+                 output_filename='', timeout=30.0,
                  log_filename='crawler', log_level=logging.INFO):
         self.base_url = base_url
         # get the hostname from base_url
@@ -26,10 +26,10 @@ class StandardCrawler(object):
         self.html_exts = html_exts
         # urls endswith media_exts will not be opened but will be written in output file
         self.media_exts = media_exts
-        # write the output as a csv file in data/ folder
-        csvfilename = 'data/%s-%s.csv' % (output_filename, datetime.now().strftime('%Y%m%d-%H%M%S'))
-        csvfile = open(csvfilename, 'wb')
-        self.writer = csv.writer(csvfile, quoting=csv.QUOTE_NONNUMERIC)
+        # to store extracted data
+        self.rows = []
+        # name of output file
+        self.output_filename = output_filename
         # timeout for request
         self.timeout = timeout
         # configure logger
@@ -49,12 +49,10 @@ class StandardCrawler(object):
         self.logger.setLevel(level)
         self.logger.info('Start crawling ...')
 
-    def crawl(self, start_url=''):
+    def crawl(self, start_url):
         """
         Crawl all links recursively.
         """
-        # set default url
-        if not start_url: start_url = self.base_url
         # advoid duplicates
         if start_url in self.visited_urls: return
         # remember the url
@@ -62,9 +60,10 @@ class StandardCrawler(object):
         # open a new page
         try:
             resp = self.browser.open(start_url, timeout=self.timeout)
+            # don't record the homepage
             if start_url != self.base_url:
-                # write to output
-                self.writerow(start_url, self.browser.title())
+                # process the output
+                self.insert_row(start_url, self.browser.title(), resp)
         except urllib2.HTTPError, e:
             self.logger.error('%d HTTPError: %s' % (e.getcode(), start_url))
             return
@@ -81,7 +80,7 @@ class StandardCrawler(object):
             ext = os.path.splitext(url.path)[1]
             if not url.hostname:
                 # convert to absolute URL
-                link_url = self.clean_url(link_url)
+                link_url = self.clean_url(link_url, resp)
             # validate extension
             if ext in self.html_exts:
                 # save url for recursion
@@ -89,7 +88,7 @@ class StandardCrawler(object):
                     next_urls.add(link_url)
             elif ext in self.media_exts:
                 # write output for this pdf url
-                self.writerow(link_url)
+                self.insert_row(link_url)
                 # remember the url as visited
                 if link_url not in self.visited_urls:
                     self.visited_urls.add(link_url)
@@ -108,12 +107,12 @@ class StandardCrawler(object):
         # use mechanize.urljoin
         return mechanize.urljoin(base_url, url)
 
-    def writerow(self, url, title='', response=None):
+    def insert_row(self, url, title='', response=None):
         """
-        Write crawled data to a csv file
+        Store crawled data into a sequence
         """
         row = self.process_row(url, title, response)
-        self.writer.writerow(row)
+        self.rows.append(row)
 
     def process_row(self, url, title='', response=None):
         """
@@ -125,4 +124,22 @@ class StandardCrawler(object):
         if not title:
             title = path.split('/')[-1]
         return title, path, url
+
+    def write_output(self):
+        """
+        Write the output as a csv file in data/ folder
+        """
+        csvfilename = 'data/%s-%s.csv' % (self.output_filename, datetime.now().strftime('%Y%m%d-%H%M%S'))
+        with open(csvfilename, 'wb') as csvfile:
+            writer = csv.writer(csvfile, quoting=csv.QUOTE_NONNUMERIC)
+            writer.writerows(self.rows)
+
+    def run(self):
+        """
+        Run the crawler
+        """
+        self.crawl(self.base_url)
+        if self.output_filename:
+            self.write_output()
+        self.logger.info('... End crawling')
 
