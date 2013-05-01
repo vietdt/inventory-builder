@@ -8,15 +8,6 @@ class CaabCrawler(StandardCrawler):
     """
     caab custom crawler
     """
-    logger = logging.getLogger('CAAB Crawler')
-    hdlr = logging.FileHandler('caab_crawler.log') # FileHandler logs to file
-    formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
-    hdlr.setFormatter(formatter)
-    logger.addHandler(hdlr)
-    ch = logging.StreamHandler() # StreamHandler logs to console
-    logger.addHandler(ch)
-    logger.setLevel(logging.INFO)
-    logger.info('Start crawling ...')
 
     def process_row(self, url, title='', response=None):
         """
@@ -41,6 +32,6 @@ class CaabCrawler(StandardCrawler):
         return itemtype, title, path, url
 
 # initiate a crawler instance
-caab_crawler = CaabCrawler('http://caab.org/', output_filename='caab_inv')
+caab_crawler = CaabCrawler('http://caab.org/', output_filename='caab_inv', log_filename='caab_crawler')
 # start crawling
 caab_crawler.crawl()
