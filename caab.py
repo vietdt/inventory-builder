@@ -37,6 +37,6 @@ caab_crawler = CaabCrawler('http://caab.org/',
                            media_exts=['.pdf'],
                            output_filename='caab_inv',
                            log_filename='caab_crawler',
-                           timeout=60.0)
+                           timeout=300.0)
 # start crawling
 caab_crawler.run()
