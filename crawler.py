@@ -14,7 +14,8 @@ class StandardCrawler(object):
     # configure logger
     logger = logging.getLogger('crawler')
 
-    def __init__(self, base_url, html_exts=['.html', '.php'], media_exts=['.pdf'], output_filename='website_inv'):
+    def __init__(self, base_url, html_exts=['.html', '.php'], media_exts=['.pdf'],
+                 output_filename='website_inv', timeout=30.0):
         self.base_url = base_url
         # get the hostname from base_url
         self.base_hostname = urlparse(base_url).hostname
@@ -30,6 +31,8 @@ class StandardCrawler(object):
         csvfilename = 'data/%s-%s.csv' % (output_filename, datetime.now().strftime('%Y%m%d-%H%M%S'))
         csvfile = open(csvfilename, 'wb')
         self.writer = csv.writer(csvfile, quoting=csv.QUOTE_NONNUMERIC)
+        # timeout for request
+        self.timeout = timeout
 
     def crawl(self, start_url=''):
         """
@@ -43,7 +46,7 @@ class StandardCrawler(object):
         self.visited_urls.add(start_url)
         # open a new page
         try:
-            resp = self.browser.open(start_url)
+            resp = self.browser.open(start_url, timeout=self.timeout)
             if start_url != self.base_url:
                 # write to output
                 self.writerow(start_url, self.browser.title())
