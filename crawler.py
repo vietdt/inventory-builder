@@ -56,7 +56,6 @@ class StandardCrawler(object):
         """
         Crawl all links recursively.
         """
-        if len(self.visited_urls) > 50: return
         # advoid duplicates
         if start_url in self.visited_urls: return
         # remember the url
@@ -86,17 +85,12 @@ class StandardCrawler(object):
         # process all links in page
         for link in self.browser.links():
             # parse the link url
-            link_url = link.url
-            url = urlparse(link_url)
-            # skip if not http link
-            if url.scheme and url.scheme not in ['http', 'https']: continue
-            # skip if external link
-            if url.hostname and self.base_hostname not in url.hostname: continue
+            url = urlparse(link.url)
+            link_url = self.validate_url(url)
+            # skip invalid url
+            if not link_url: continue
             # get url extension
             ext = os.path.splitext(url.path)[1]
-            if not url.hostname:
-                # convert to absolute URL
-                link_url = self.clean_url(link_url)
             # don't browse for urls that endswith media_exts
             if ext in self.media_exts:
                 # write output for this media url
@@ -126,6 +120,25 @@ class StandardCrawler(object):
         # use mechanize.urljoin
         return mechanize.urljoin(base_url, url)
 
+    def _validate_url(self, url):
+        """
+        Skip invalid url or clean it
+        """
+        # skip if not http link
+        if url.scheme and url.scheme not in ['http', 'https']: return
+        # skip if external link
+        if url.hostname and self.base_hostname not in url.hostname: return
+        if not url.hostname:
+            # convert to absolute URL
+            return self.clean_url(url.geturl())
+        return url.geturl()
+
+    def validate_url(self, url):
+        """
+        Should be modified by extender class
+        """
+        return self._validate_url(url)
+
     def insert_row(self, url, response=None):
         """
         Store crawled data into a sequence
@@ -154,11 +167,19 @@ class StandardCrawler(object):
             writer = csv.writer(csvfile, quoting=csv.QUOTE_NONNUMERIC)
             writer.writerows(self.rows)
 
+    def sort(self):
+        """
+        Sort results before writing to output.
+        Shoud be implemented by extender class.
+        """
+        return self.rows
+
     def run(self):
         """
         Run the crawler
         """
         self.crawl(self.base_url)
+        self.sort()
         if self.output_filename:
             self.write_output()
         self.logger.info('... End crawling')
