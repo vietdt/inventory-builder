@@ -9,6 +9,15 @@ class SokaCrawler(StandardCrawler):
     sokaspirit custom crawler
     """
 
+    def validate_url(self, url):
+        """
+        Override default behaviour of validate_url
+        """
+        # skip language changing link
+        if 'set_language=' in url.query: return
+        # run default validation
+        return self._validate_url(url)
+
     def process_row(self, url, response=None):
         """
         Override default behaviour of process_row
