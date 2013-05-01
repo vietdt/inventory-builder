@@ -13,8 +13,9 @@ class StandardCrawler(object):
     """
 
     def __init__(self, base_url, html_exts=[], media_exts=[],
-                 output_filename='', timeout=30.0,
-                 log_filename='crawler', log_level=logging.INFO):
+                 output_filename='', timeout=60.0,
+                 log_filename='crawler', log_level=logging.INFO,
+                 verbose=False):
         self.base_url = base_url
         # get the hostname from base_url
         self.base_hostname = urlparse(base_url).hostname
@@ -34,6 +35,8 @@ class StandardCrawler(object):
         self.timeout = timeout
         # configure logger
         self.config_logger(log_filename, log_level)
+        # determine whether to log successful results
+        self.verbose = verbose
 
     def config_logger(self, name, level):
         """
@@ -113,6 +116,8 @@ class StandardCrawler(object):
         """
         row = self.process_row(url, title, response)
         self.rows.append(row)
+        if self.verbose:
+            self.logger.info('200 OK: %s' % url)
 
     def process_row(self, url, title='', response=None):
         """
