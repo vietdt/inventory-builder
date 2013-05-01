@@ -56,19 +56,28 @@ class StandardCrawler(object):
         """
         Crawl all links recursively.
         """
+        if len(self.visited_urls) > 50: return
         # advoid duplicates
         if start_url in self.visited_urls: return
         # remember the url
         self.visited_urls.add(start_url)
         # open a new page
         try:
-            resp = self.browser.open(start_url, timeout=self.timeout)
+            # open a URL without visiting it, we check the subtype first
+            resp = self.browser.open_novisit(start_url, timeout=self.timeout)
+            subtype = resp.info().subtype
+            # visit the opened response if subtype is html
+            if subtype == 'html':
+                self.browser.visit_response(resp, self.browser.request)
+                # set new response
+                resp = self.browser.response()
             # don't record the homepage
             if start_url != self.base_url:
                 # process the output
                 self.insert_row(start_url, resp)
-                # skip next if it's not a html response
-                if resp.info().subtype != 'html': return
+            # skip next if it's not a html response
+            if subtype != 'html':
+                return
         except urllib2.HTTPError, e:
             self.logger.error('%d HTTPError: %s' % (e.getcode(), start_url))
             return
