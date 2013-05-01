@@ -23,7 +23,7 @@ class StandardCrawler(object):
         self.visited_urls = set()
         # initiate a browser instance
         self.browser = mechanize.Browser()
-        # only urls endswith these html_exts are browsable by this crawler
+        # if this option is set, only urls endswith these exts are browsable by the crawler
         self.html_exts = html_exts
         # urls endswith media_exts will not be opened but will be written in output file
         self.media_exts = media_exts
@@ -66,7 +66,9 @@ class StandardCrawler(object):
             # don't record the homepage
             if start_url != self.base_url:
                 # process the output
-                self.insert_row(start_url, self.browser.title(), resp)
+                self.insert_row(start_url, resp)
+                # skip next if it's not a html response
+                if resp.info().subtype != 'html': return
         except urllib2.HTTPError, e:
             self.logger.error('%d HTTPError: %s' % (e.getcode(), start_url))
             return
@@ -77,24 +79,29 @@ class StandardCrawler(object):
             # parse the link url
             link_url = link.url
             url = urlparse(link_url)
+            # skip if not http link
+            if url.scheme and url.scheme not in ['http', 'https']: continue
             # skip if external link
             if url.hostname and self.base_hostname not in url.hostname: continue
             # get url extension
             ext = os.path.splitext(url.path)[1]
             if not url.hostname:
                 # convert to absolute URL
-                link_url = self.clean_url(link_url, resp)
-            # validate extension
-            if ext in self.html_exts:
-                # save url for recursion
-                if link_url not in self.visited_urls:
-                    next_urls.add(link_url)
-            elif ext in self.media_exts:
-                # write output for this pdf url
+                link_url = self.clean_url(link_url)
+            # don't browse for urls that endswith media_exts
+            if ext in self.media_exts:
+                # write output for this media url
                 self.insert_row(link_url)
                 # remember the url as visited
                 if link_url not in self.visited_urls:
                     self.visited_urls.add(link_url)
+                continue
+            # if html_exts is set, then skip all urls that not endswith html_exts
+            if self.html_exts and ext not in self.html_exts:
+                continue
+            # save url for recursion
+            if link_url not in self.visited_urls:
+                next_urls.add(link_url)
         # start recursion
         for url in next_urls:
             self.crawl(url)
@@ -110,24 +117,23 @@ class StandardCrawler(object):
         # use mechanize.urljoin
         return mechanize.urljoin(base_url, url)
 
-    def insert_row(self, url, title='', response=None):
+    def insert_row(self, url, response=None):
         """
         Store crawled data into a sequence
         """
-        row = self.process_row(url, title, response)
+        row = self.process_row(url, response)
         self.rows.append(row)
         if self.verbose:
             self.logger.info('200 OK: %s' % url)
 
-    def process_row(self, url, title='', response=None):
+    def process_row(self, url, response=None):
         """
         Process data to generate a csv row.
         Can be modified by extender class to generate different information.
         """
         parsed_url = urlparse(url)
         path = parsed_url.path
-        if not title:
-            title = path.split('/')[-1]
+        title = path.split('/')[-1]
         return title, path, url
 
     def write_output(self):
