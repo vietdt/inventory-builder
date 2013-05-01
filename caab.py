@@ -32,6 +32,11 @@ class CaabCrawler(StandardCrawler):
         return itemtype, title, path, url
 
 # initiate a crawler instance
-caab_crawler = CaabCrawler('http://caab.org/', output_filename='caab_inv', log_filename='caab_crawler')
+caab_crawler = CaabCrawler('http://caab.org/',
+                           html_exts=['.html', '.php'],
+                           media_exts=['.pdf'],
+                           output_filename='caab_inv',
+                           log_filename='caab_crawler',
+                           timeout=60.0)
 # start crawling
-caab_crawler.crawl()
+caab_crawler.run()
