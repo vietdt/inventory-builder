@@ -11,11 +11,10 @@ class StandardCrawler(object):
     """
     A basic web crawler that helps build a website inventory easily.
     """
-    # configure logger
-    logger = logging.getLogger('crawler')
 
     def __init__(self, base_url, html_exts=['.html', '.php'], media_exts=['.pdf'],
-                 output_filename='website_inv', timeout=30.0):
+                 output_filename='website_inv', timeout=30.0,
+                 log_filename='crawler', log_level=logging.INFO):
         self.base_url = base_url
         # get the hostname from base_url
         self.base_hostname = urlparse(base_url).hostname
@@ -33,6 +32,22 @@ class StandardCrawler(object):
         self.writer = csv.writer(csvfile, quoting=csv.QUOTE_NONNUMERIC)
         # timeout for request
         self.timeout = timeout
+        # configure logger
+        self.config_logger(log_filename, log_level)
+
+    def config_logger(self, name, level):
+        """
+        Configure logger with file and stream handlers
+        """
+        self.logger = logging.getLogger(name)
+        hdlr = logging.FileHandler('%s.log' % name) # FileHandler logs to file
+        formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
+        hdlr.setFormatter(formatter)
+        self.logger.addHandler(hdlr)
+        ch = logging.StreamHandler() # StreamHandler logs to console
+        self.logger.addHandler(ch)
+        self.logger.setLevel(level)
+        self.logger.info('Start crawling ...')
 
     def crawl(self, start_url=''):
         """
